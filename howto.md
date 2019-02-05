@@ -11,8 +11,8 @@
 `brew install postgresql`
 
 ### start, and create db
-`brew services stop postgresql`
-'psql postgres'
+`brew services start postgresql`
+`psql postgres`
 * then you can exit psql with `\q`
 * log in to rds with postico if ya want and run `create database soccer`
 
