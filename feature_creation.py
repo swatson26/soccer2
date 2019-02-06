@@ -9,27 +9,27 @@ config_dict = {
         'team_stats':[{'home_stat_name':'home_goals_scored',
                       'away_stat_name':'away_goals_scored',
                       'new_val_name':'goals_scored'},
-                    {'home_stat_name':'away_goals_scored',
-                     'away_stat_name':'home_goals_scored',
-                     'new_val_name':'goals_conceded'},
-                    {'home_stat_name':'home_shots',
-                     'away_stat_name':'away_shots',
-                     'new_val_name':'shots_taken'},
-                    {'home_stat_name':'home_shots_target',
-                     'away_stat_name':'away_shots_target',
-                     'new_val_name':'shots_taken_on_target'},
-                    {'home_stat_name':'away_shots',
-                     'away_stat_name':'home_shots',
-                     'new_val_name':'shots_allowed'},
-                    {'home_stat_name':'away_shots_target',
-                     'away_stat_name':'home_shots_target',
-                     'new_val_name':'shots_allowed_on_target'},
-                    {'home_stat_name':'home_corners_won',
-                     'away_stat_name':'away_corners_won',
-                     'new_val_name':'corners_won'},
-                    {'home_stat_name':'away_corners_won',
-                     'away_stat_name':'home_corners_won',
-                     'new_val_name':'corners_conceded'}
+                      {'home_stat_name':'away_goals_scored',
+                       'away_stat_name':'home_goals_scored',
+                       'new_val_name':'goals_conceded'},
+                      {'home_stat_name':'home_shots',
+                       'away_stat_name':'away_shots',
+                       'new_val_name':'shots_taken'},
+                      {'home_stat_name':'home_shots_target',
+                       'away_stat_name':'away_shots_target',
+                       'new_val_name':'shots_taken_on_target'},
+                      {'home_stat_name':'away_shots',
+                       'away_stat_name':'home_shots',
+                       'new_val_name':'shots_allowed'},
+                      {'home_stat_name':'away_shots_target',
+                       'away_stat_name':'home_shots_target',
+                       'new_val_name':'shots_allowed_on_target'},
+                      {'home_stat_name':'home_corners_won',
+                       'away_stat_name':'away_corners_won',
+                       'new_val_name':'corners_won'},
+                      {'home_stat_name':'away_corners_won',
+                       'away_stat_name':'home_corners_won',
+                       'new_val_name':'corners_conceded'}
                     ]
     }
 
@@ -196,9 +196,22 @@ def add_model_features(teams_df,user,db_pwd):
         df = teams_df[teams_df['game_id']==game_id]
         home_df = df[df['home_team_name']==df['target_team']]
         away_df = df[df['away_team_name']==df['target_team']]
-        base_df = home_df.loc[:,['game_id','home_team_name',
-                                 'away_team_name','home_avg_win_odds',
-                                 'away_avg_win_odds','draw_avg_win_odds']]
+        base_df = home_df.loc[:,['game_id',
+                                 'home_team_name',
+                                 'away_team_name',
+                                 'home_avg_win_odds',
+                                 'draw_avg_win_odds',
+                                 'away_avg_win_odds',
+                                 'home_max_win_odds',
+                                 'draw_max_win_odds',
+                                 'away_max_win_odds',
+                                 'home_avg_win_odds2',
+                                 'draw_avg_win_odds2',
+                                 'away_avg_win_odds2',
+                                 'home_max_win_odds2',
+                                 'draw_max_win_odds2',
+                                 'away_max_win_odds2',]
+                              ]
         home_df = home_df.loc[:,model_inputs]
         away_df = away_df.loc[:,model_inputs]
         home_df.columns = ['home_' + str(col) for col in home_df.columns]

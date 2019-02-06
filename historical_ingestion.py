@@ -88,10 +88,16 @@ def add_elo_alt_name(league, data_folder):
     df = pd.read_pickle(os.path.join(data_folder,league, league + '.pkl'))
     bundesliga_replace = {'Bayern Munich' : 'Bayern', 'FC Koln' :'Koeln', 'Werder Bremen':'Werder', \
                     'Ein Frankfurt': 'Frankfurt', 'Schalke 04': 'Schalke', 'Nurnberg': 'Nuernberg',\
-                    "M'gladbach": 'Gladbach' ,'Fortuna Dusseldorf': 'Duesseldorf' }
+                    "M'gladbach": 'Gladbach' ,'Fortuna Dusseldorf': 'Duesseldorf',
+                    'Greuther Furth':'Fuerth',' Hansa Rostock':'Rostock',
+                    'Kaiserslautern':'Lautern', }
     LaLiga_replace = {'Ath Bilbao' : 'Bilbao', 'Ath Madrid': 'Atletico', 'Espanol':'Espanyol', \
-                  'La Coruna' : 'Depor', 'Sp Gijon': 'Gijon', 'Vallecano' : 'Rayo Vallecano'}
-    Championnat_replace = { 'St Etienne':'Saint-Etienne' ,   'Ajaccio GFCO':'Ajaccio'}
+                      'La Coruna' : 'Depor', 'Sp Gijon': 'Gijon', 'Vallecano' : 'Rayo Vallecano',
+                      'Gimnastic':'Tarragona'}
+    Championnat_replace = {'St Etienne':'Saint-Etienne',
+                           'Evian Thonon Gaillard':'Evian TG',
+                           'Ajaccio GFCO':'Ajaccio',
+                           'Areles':'Arles-Avignon'}
     Championship_replace = {"Nott'm Forest":"Forest",'Milton Keynes Dons':'MKDons',}
     Premier_replace = {"Nott'm Forest":"Forest",'Milton Keynes Dons':'MKDons',}
 
@@ -234,6 +240,15 @@ def populate_historical_data(data_folder,db_pwd,user):
                                          'BbAvH':'home_avg_win_odds',
                                          'BbAvD':'draw_avg_win_odds',
                                          'BbAvA':'away_avg_win_odds',
+                                         'BbMxH':'home_max_win_odds',
+                                         'BbMxD':'draw_max_win_odds',
+                                         'BbMxA':'away_max_win_odds',
+                                         'AvgH':'home_avg_win_odds2',
+                                         'AvgD':'draw_avg_win_odds2',
+                                         'AvgA':'away_avg_win_odds2',
+                                         'MaxH':'home_max_win_odds2',
+                                         'MaxD':'draw_max_win_odds2',
+                                         'MaxA':'away_max_win_odds2',
                                          'EloHome':'home_elo_rank',
                                          'EloAway':'away_elo_rank',
                                          })
@@ -342,6 +357,15 @@ def populate_historical_data(data_folder,db_pwd,user):
                     'home_avg_win_odds',
                     'draw_avg_win_odds',
                     'away_avg_win_odds',
+                    'home_max_win_odds',
+                    'draw_max_win_odds',
+                    'away_max_win_odds',
+                    'home_avg_win_odds2',
+                    'draw_avg_win_odds2',
+                    'away_avg_win_odds2',
+                    'home_max_win_odds2',
+                    'draw_max_win_odds2',
+                    'away_max_win_odds2',
                     'home_elo_rank',
                     'away_elo_rank',]]
     write_df = write_df.fillna(value=0)
@@ -368,6 +392,15 @@ def populate_historical_data(data_folder,db_pwd,user):
     for col in ['home_avg_win_odds',
                 'draw_avg_win_odds',
                 'away_avg_win_odds',
+                'home_max_win_odds',
+                'draw_max_win_odds',
+                'away_max_win_odds',
+                'home_avg_win_odds2',
+                'draw_avg_win_odds2',
+                'away_avg_win_odds2',
+                'home_max_win_odds2',
+                'draw_max_win_odds2',
+                'away_max_win_odds2',
                 'home_elo_rank',
                 'away_elo_rank',]:
         write_df[col] = write_df[col].astype('float')
@@ -404,7 +437,8 @@ if __name__ == '__main__':
         description='hacky script to get all historical \
         data into db in one-time mode')
     parser.add_argument('-f', '--folder', type=str, required=True,
-                        help='path to write data to before it goes off to db land')
+                        help='path to write data to before it goes off to db \
+                        land and where stadium_locations_final.csv lives')
     parser.add_argument('-p', '--db_pwd', type=str, required=True,
                         help='password for db')
     parser.add_argument('-u', '--db_user', type=str, required=True,
