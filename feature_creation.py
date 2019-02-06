@@ -204,13 +204,7 @@ def add_model_features(teams_df,user,db_pwd):
                                  'away_avg_win_odds',
                                  'home_max_win_odds',
                                  'draw_max_win_odds',
-                                 'away_max_win_odds',
-                                 'home_avg_win_odds2',
-                                 'draw_avg_win_odds2',
-                                 'away_avg_win_odds2',
-                                 'home_max_win_odds2',
-                                 'draw_max_win_odds2',
-                                 'away_max_win_odds2',]
+                                 'away_max_win_odds',]
                               ]
         home_df = home_df.loc[:,model_inputs]
         away_df = away_df.loc[:,model_inputs]

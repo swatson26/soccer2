@@ -243,12 +243,6 @@ def populate_historical_data(data_folder,db_pwd,user):
                                          'BbMxH':'home_max_win_odds',
                                          'BbMxD':'draw_max_win_odds',
                                          'BbMxA':'away_max_win_odds',
-                                         'AvgH':'home_avg_win_odds2',
-                                         'AvgD':'draw_avg_win_odds2',
-                                         'AvgA':'away_avg_win_odds2',
-                                         'MaxH':'home_max_win_odds2',
-                                         'MaxD':'draw_max_win_odds2',
-                                         'MaxA':'away_max_win_odds2',
                                          'EloHome':'home_elo_rank',
                                          'EloAway':'away_elo_rank',
                                          })
