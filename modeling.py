@@ -12,6 +12,10 @@ import prettytable
 from StringIO import StringIO
 from sklearn.model_selection import GridSearchCV
 import xgboost as xgb
+from sklearn.metrics import precision_recall_curve
+from matplotlib import cm
+from matplotlib.colors import rgb2hex
+
 
 ALL_LEAGUES = ['Premier', 'Championship', 'SerieA',
                'laLiga1', 'Bundesliga1', 'Championnat']
@@ -104,6 +108,7 @@ class TrainTestValidate:
 
     def run(self):
         self._create_train_test()
+
 
 class XgbFlow:
     def __init__(self,TrainTestValidate,league,print_output):
@@ -241,3 +246,291 @@ class XgbFlow:
         print 'finding initial model paramaters'
         self._convert_to_binary_class()
         self._gridsearch()
+
+
+class Eval:
+    """
+    class for evaluating a list of model objects
+
+    Attributes:
+    models_list (list): a list of dictionaries that take the form \
+    {'model':model_obj,'model_id':some_string}
+
+    """
+    def __init__(self,models_list):
+        self.models_list = models_list
+
+
+    def print_model_params(self):
+        for m in self.models_list:
+            print '--------------'
+            print m['league']
+            print m['model'].initial_model['best_insample_params']
+
+
+    def plot_pr_curves(self):
+        for m in self.models_list:
+            lg = m['league']
+            mdl = m['model']
+            self._plot_pr_curve(lg,mdl)
+
+
+    def plot_mean_std_returns(self,n=200):
+        for m in self.models_list:
+            lg = m['league']
+            mdl = m['model']
+            result2_df = mdl.result_df.copy()
+            mean_rtns = []
+            mean_rtns_kelly = []
+            thresholds = []
+            stds = []
+            stds_kelly = []
+            n=n
+            for ix,i in enumerate(np.linspace(0.0,0.9,n)):
+                wagers = []
+                for ix, row in result2_df.iterrows():
+                    wagers.append(kelly_criterion(row['home_avg_win_odds'],row['y_score'],i))
+                result2_df['kelly_wager'] = wagers
+                result2_df['ex_rtn_kelly'] = np.where((result2_df['home_win']==1)&(result2_df['kelly_wager']>0),
+                                                  (result2_df['home_avg_win_odds']-1)*result2_df['kelly_wager'],
+                                                   np.where((result2_df['home_win']!=1)&(result2_df['kelly_wager']>0),
+                                                            -result2_df['kelly_wager'],0)
+                                           )
+                result2_df['ex_rtn'] = np.where((result2_df['home_win']==1)&(result2_df['y_score']>i),
+                                             result2_df['home_avg_win_odds']-1,
+                                            np.where((result2_df['home_win']!=1)&(result2_df['y_score']>i),
+                                                     -1,0)
+                                           )
+                result2_filter = result2_df[result2_df['ex_rtn_kelly']!=0]
+                result2_df.index = result2_df['game_date']
+                thresholds.append(round(i,2))
+                mean_rtns.append(result2_filter['ex_rtn'].mean())
+                stds.append(result2_filter['ex_rtn'].std())
+                mean_rtns_kelly.append(result2_filter['ex_rtn_kelly'].mean())
+                stds_kelly.append(result2_filter['ex_rtn_kelly'].std())
+            plt_kelly_df = pd.DataFrame({'t':thresholds,
+                                         'rtn':mean_rtns_kelly,
+                                         'std':stds_kelly
+                                        })
+            plt_df = pd.DataFrame({'t':thresholds,
+                                   'rtn':mean_rtns,
+                                   'std':stds
+                                  })
+            plt_df = plt_df.sort_values('t',ascending=False)
+            data = [
+                go.Scatter(
+                    x=plt_df['std'],
+                    y=plt_df['rtn'],
+                    text=plt_df['t'],
+                    name='Naive Allocation',
+                    mode='markers+lines',
+                    marker=dict(
+                    color = plt_df['t'],
+                    colorscale='Viridis',
+                    size=10,
+                        line = dict(
+                        color = 'black',
+                        width = 2),
+                    showscale=True),
+                    line=dict(
+                    color = 'gray',
+                    width=2)
+                ),
+                    go.Scatter(
+                    x=plt_kelly_df['std'],
+                    y=plt_kelly_df['rtn'],
+                    text=plt_kelly_df['t'],
+                    name='Kelly Criterion',
+                    mode='markers+lines',
+                    marker=dict(
+                    color = plt_kelly_df['t'],
+                    colorscale='Viridis',
+                    size=10,
+                        line = dict(
+                        color = 'black',
+                        width = 2),
+                    showscale=True),
+                    line=dict(
+                    color = 'gray',
+                    width=2)
+                )
+            ]
+            layout=go.Layout(
+                            legend=dict(orientation="h"),
+                            title='%s σ,μ Returns'%(lg),
+                            xaxis=dict(
+                                title='Standard Deviation',
+                                titlefont=dict(
+                                    size=18,
+                                    color='#7f7f7f'
+                                )
+                            ),
+                            yaxis=dict(
+                                title='Mean Return',
+                                titlefont=dict(
+                                    size=18,
+                                    color='#7f7f7f'
+                                )
+                            )
+            )
+            fig=go.Figure(data=data,layout=layout)
+            iplot(fig)
+
+
+    def plot_cumulative_profit(self,threshold_start=0.6,threshold_stop=0.9):
+        for m in self.models_list:
+            lg = m['league']
+            mdl = m['model']
+            result2_df = mdl.result_df.copy()
+            data = []
+            n = 10
+            cmap = cm.get_cmap('viridis', n)
+            cmap2 = cm.get_cmap('viridis', n)
+            fig = tools.make_subplots(rows=1, cols=2,shared_yaxes=True,print_grid=False)
+            for ix,i in enumerate(np.linspace(threshold_start,threshold_stop,n)):
+                rgb = cmap(ix)[:3]
+                hexx = rgb2hex(rgb)
+                rgb2 = cmap2(ix)[:3]
+                hexx2 = rgb2hex(rgb2)
+                wagers = []
+                for ix, row in result2_df.iterrows():
+                    wagers.append(kelly_criterion(row['home_avg_win_odds'],row['y_score'],i))
+                result2_df['kelly_wager'] = wagers
+                result2_df['ex_rtn_kelly'] = np.where((result2_df['home_win']==1)&(result2_df['kelly_wager']>0),
+                                                  (result2_df['home_avg_win_odds']-1)*result2_df['kelly_wager'],
+                                                   np.where((result2_df['home_win']!=1)&(result2_df['kelly_wager']>0),
+                                                            -result2_df['kelly_wager'],0)
+                                           )
+                result2_df['ex_rtn'] = np.where((result2_df['home_win']==1)&(result2_df['y_score']>i),
+                                             result2_df['home_avg_win_odds']-1,
+                                            np.where((result2_df['home_win']!=1)&(result2_df['y_score']>i),
+                                                     -1,0)
+                                           )
+                result2_df.index = result2_df['game_date']
+                trace1 = go.Scatter(
+                                showlegend=False,
+                                x=result2_df['ex_rtn'].index,
+                                y=result2_df['ex_rtn'].cumsum(),
+                                name=str(round(i,2)),
+                                line = dict(
+                                            color = (hexx),
+                                            width = 2),
+
+                )
+                fig.append_trace(trace1, 1, 1)
+                trace2 = go.Scatter(
+                    showlegend=False,
+                     name=str(round(i,2)),
+                    x=result2_df['ex_rtn_kelly'].index,
+                    y=result2_df['ex_rtn_kelly'].cumsum(),
+                   line = dict(
+                                            color = (hexx2),
+                                            width = 2),
+                )
+                fig.append_trace(trace2, 1, 2)
+            fig['layout'].update(height=600, width=1000,
+                                 title='%s Cumulative Profits <br> for Naive Allocation and Kelly Criterion'%(lg))
+            iplot(fig)
+
+
+    def get_stats(self,threshold=0.85):
+        for m in self.models_list:
+            lg = m['league']
+            mdl = m['model']
+            result2_df = mdl.result_df.copy()
+            print '--------------------------'
+            print lg
+            print '--------------------------'
+            wagers = []
+            for ix, row in result2_df.iterrows():
+                wagers.append(self._kelly_criterion(row['home_avg_win_odds'],row['y_score'],threshold))
+            result2_df['kelly_wager'] = wagers
+            result2_df['ex_rtn_kelly'] = np.where((result2_df['home_win']==1)&(result2_df['kelly_wager']>0),
+                                              (result2_df['home_avg_win_odds']-1)*result2_df['kelly_wager'],
+                                               np.where((result2_df['home_win']!=1)&(result2_df['kelly_wager']>0),
+                                                        -result2_df['kelly_wager'],0)
+                                       )
+            result2_df['ex_rtn'] = np.where((result2_df['home_win']==1)&(result2_df['y_score']>threshold),
+                                         result2_df['home_avg_win_odds']-1,
+                                        np.where((result2_df['home_win']!=1)&(result2_df['y_score']>threshold),
+                                                 -1,0)
+                                       )
+            result2_df.index = pd.to_datetime(result2_df['game_date'])
+            ff = result2_df[result2_df['kelly_wager']!=0]
+            print 'Sortino Ratio: '+  str(round(ff['ex_rtn_kelly'].mean()/ff['ex_rtn_kelly'][ff['ex_rtn_kelly']<0].std(),2))
+            t = (result2_df.index.max() - result2_df.index.min()).days/365.
+            annualized_rtn = (((result2_df['ex_rtn_kelly'].sum()/1)**(1/float(t)))-1)*100.
+            print 'Annualized Returns: %s%%'%(str(round(annualized_rtn,2)))
+            a = len(result2_df)
+            f = len(ff)
+            print 'Betting Rate: %s%%'%(round(float(f)/a*100.,2))
+            prec = len(result2_df[(result2_df['kelly_wager']!=0)&(result2_df['home_win']==1)])/float(len(result2_df[result2_df['kelly_wager']!=0]))
+            print 'Precision: %s'%(round(prec,3))
+            fig, ax = plt.subplots(1,2)
+            fig.set_size_inches(16,6)
+            xx = ff.groupby(pd.Grouper(freq='w'))['kelly_wager'].sum()[ff.groupby(pd.Grouper(freq='w'))['kelly_wager'].sum()>0]
+            sns.distplot(xx,ax=ax[0])
+            ax[0].axvline(np.percentile(xx,50),color='orange')
+            ax[0].axvline(np.mean(xx),color='green')
+            ax[0].set_title('Total Weekly Wager Size \n Median: %s\n Mean: %s'%(str(round(np.mean(xx),3)),
+                                                                             str(round(np.median(xx),3))),size=20)
+            xx = ff.groupby(pd.Grouper(freq='w'))['ex_rtn_kelly'].sum()[ff.groupby(pd.Grouper(freq='w'))['kelly_wager'].sum()>0]
+            sns.distplot(xx,
+                         ax=ax[1],
+                         norm_hist=True,
+                         label='historical')
+            ax[1].axvline(np.percentile(xx,1),color='red')
+            ax[1].axvline(np.mean(xx),color='green')
+            ax[1].axvline(np.median(xx),color='orange')
+            ax[1].set_title('Historical Weekly Returns \n 1st Percentile: %s\n Mean: %s\n Median: %s'%(str(round(np.percentile(xx,1),3)),
+                                                                                                     str(round(np.mean(xx),3)),
+                                                                                                     str(round(np.median(xx),3))
+                                                                                                    ),size=20)
+            plt.show()
+
+
+    ## Helper Functions
+    def _kelly_criterion(self, win_odds, win_prob,thresh):
+        if win_prob >= thresh:
+            alloc = ((win_prob*win_odds) - 1)/(float(win_odds)-1)
+        else:
+            alloc = 0
+
+        if alloc < 0:
+            alloc = 0
+        return alloc
+
+    def _plot_pr_curve(self,league,model_obj):
+        precision, recall, thresholds = precision_recall_curve(model_obj.result_df['home_win'],
+                                                               model_obj.result_df['y_score'],)
+        yprob = model_obj.result_df['y_score']
+        y_actual = model_obj.result_df['home_win']
+        response_rates = []
+        for b in thresholds:
+            rr = str(round(sum(yprob>b)/float(len(y_actual)),3))
+            ss = rr + '|' + str(round(b,3))
+            response_rates.append(ss)
+        data = [
+            go.Scatter(
+                x=recall,
+                y=precision,
+                text=response_rates
+            )
+        ]
+        layout=go.Layout(title=league,
+                            xaxis=dict(
+                            title='recall',
+                            titlefont=dict(
+                                size=9,
+                                color='#7f7f7f'
+                            )
+                        ),
+                        yaxis=dict(
+                            title='precision',
+                            titlefont=dict(
+                                size=9,
+                                color='#7f7f7f'
+                            )
+                        ))
+        fig=go.Figure(data=data,layout=layout)
+        iplot(fig)
