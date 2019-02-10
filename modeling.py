@@ -125,12 +125,12 @@ class XgbFlow:
                 y_train = data['y_train']
                 params = {'max_depth': [3,5,7],
                           'min_child_weight': [3,5,7],
-                          'learning_rate': [0.01,0.1],
-                          'colsample_bytree': [0.5,0.7,0.9],
+                          'learning_rate': [0.01,0.001],
+                          'colsample_bytree': [0.5,0.7],
                           'subsample': [0.4,0.6,0.8],
-                          'max_delta_step':[0,1,3]
+                          'max_delta_step':[0,1]
                          }
-                ind_params = {'n_estimators': 3000,
+                ind_params = {'n_estimators': 4000,
                               'seed':26,
                               'early_stopping_rounds':200,
                               'objective':'binary:logistic'
@@ -173,8 +173,8 @@ class XgbFlow:
         trained_xgb_model = xgb.train(params=final_params,
                                       verbose_eval=False,
                                       dtrain=xgb_matrix_train,
-                                      num_boost_round=5000,
-                                      early_stopping_rounds=500,
+                                      num_boost_round=6000,
+                                      early_stopping_rounds=800,
                                       evals=[(xgb_matrix_train,'train'),
                                               (xgb_matrix_test,'eval')]
                                       )
