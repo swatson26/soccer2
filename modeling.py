@@ -13,7 +13,8 @@ from StringIO import StringIO
 from sklearn.model_selection import GridSearchCV
 import xgboost as xgb
 
-ALL_LEAGUES = ['Premier', 'Championship', 'SerieA', 'laLiga1', 'Bundesliga1', 'Championnat']
+ALL_LEAGUES = ['Premier', 'Championship', 'SerieA',
+               'laLiga1', 'Bundesliga1', 'Championnat']
 SEASON_SPLITS = {'train_test':10,'validate':6}
 
 
