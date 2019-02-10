@@ -488,7 +488,22 @@ class Eval:
                                                                                                     ),size=20)
             plt.show()
 
+    def model_feature_importance(self):
+        for m in self.models_list:
+            lg = m['league']
+            mdl = m['model']
+            fi_df = mdl.initial_model['insample_feat_imp_df']
+            data = [
+                go.Bar(x=fi_df['values'],
+                       y=fi_df['features'],
+                       orientation='h',
+                       text=fi_df['features'])
+            ]
+            layout=go.Layout(title=lg)
+            fig=go.Figure(data=data,layout=layout)
+            iplot(fig)
 
+            
     ## Helper Functions
     def _kelly_criterion(self, win_odds, win_prob,thresh):
         if win_prob >= thresh:
